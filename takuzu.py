@@ -1,12 +1,24 @@
 import re, itertools, copy
 
 def rotate_right(puzzle):
+	"""
+	Rotates the puzzle right thus making
+	our columns into our rows and vice versa
+	"""
 	return [''.join(t) for t in zip(*puzzle[::-1])]
 
 def rotate_left(puzzle):
+	"""
+	Rotates the puzzle left thus making
+	our rows back into our columns
+	"""
 	return [''.join(t) for t in list(zip(*puzzle))[::-1]]
 
 def replace_twos(line):
+	"""
+	An easy placement of alternating numbers. 
+	Helps fill out the initial board
+	"""
 	line = line.replace('.00.', '1001')
 	line = line.replace('00.', '001')
 	line = line.replace('.00', '100')
@@ -21,6 +33,10 @@ def replace_twos(line):
 	return line
 
 def half_filled(line):
+	"""
+	Fills all .s with the opposite number
+	if the board has half already filled
+	"""
 	if line.count('1') == (len(line) // 2):
 		line = line.replace('.', '0')
 	elif line.count('0') == (len(line) // 2):
@@ -29,7 +45,10 @@ def half_filled(line):
 	return line
 
 def solve_partial(puzzle):
-	# Replacing our strings that match a simple pattern
+	"""
+	Finds rows and columns that match a 
+	criteria and replaces them 
+	"""
 	for i in range(len(puzzle)):
 		puzzle[i] = replace_twos(puzzle[i])
 		puzzle[i] = half_filled(puzzle[i])
@@ -44,6 +63,12 @@ def solve_partial(puzzle):
 	return puzzle
 
 def fill_rest(puzzle, valid_lines):
+	"""
+	Brute force solves the rest of the
+	puzzle by populating potential 
+	solutions for each line and validating
+	whether the entire puzzle is valid
+	"""
 	# In the unlikely scenario where we've already solved it
 	if satisfy_constraints(puzzle):
 		return puzzle
@@ -65,6 +90,10 @@ def fill_rest(puzzle, valid_lines):
 	print("UH OH")
 
 def satisfy_constraints(puzzle):
+	"""
+	Checks a bunch of criteria the puzzle must
+	match before it satisfies the constraints.
+	"""
 	rot_puzzle = rotate_right(puzzle)
 
 	contain_dot = not any(['.' in line for line in puzzle])
@@ -87,9 +116,17 @@ def like_original(line, potential_solution):
 	return True if re.match(line, potential_solution) else False
 
 def three_consecutive(line):
+	"""
+	Returns a bool whether or not there are three
+	consecutive numbers in a row on our line
+	"""
 	return True if re.search('[0]{3,}|[1]{3,}', line) else False
 
 def equal_num(line):
+	"""
+	Returns a bool determining if there are more
+	1s than half the length of our line
+	"""
 	if line.count('1') > len(line) // 2 or line.count('0') > len(line) // 2:
 		return False
 	return True
@@ -101,12 +138,20 @@ def flatten(deep_list):
 	return deep_list
 
 def build_perms(s, match, left):
+	"""
+	A recursive function that takes an original 
+	prefix, a dictionary that matches with the
+	prefix, and the number of iterations we have
+	left. Returns all the permutations for a prefix.
+	"""
 	if left == 0:
 		return s[:-2] # Cut off our last two appended 
 	prefix = s[-2:]
 	return [build_perms(s + postfix, match, left - 2) for postfix in match[prefix]]
 
 def get_permutations(size):
+	# A dictionary to match all of our valid 
+	# prefixes with all valid postfixes
 	match = {
 		'00': ['10', '11'],
 		'01': ['01', '10', '00'],
@@ -121,6 +166,7 @@ def get_permutations(size):
 def print_puzzle(puzzle):
 	for line in puzzle:
 		print(line)
+	print()
 
 if __name__ == '__main__':
 	puzzle = open('puzzle.txt', 'r').readlines()
@@ -128,16 +174,17 @@ if __name__ == '__main__':
 
 	print("ORIGINAL")
 	print_puzzle(puzzle)
-	print()
 	
 	puzzle_copy = []
+	# Go until our solve partial returns the
+	# same puzzle as before; this means we
+	# can't get any more easy placements
 	while puzzle != puzzle_copy:
 		puzzle_copy = copy.deepcopy(puzzle)
 		puzzle = solve_partial(puzzle)
 
 	print("AFTER PARTIAL")
 	print_puzzle(puzzle)
-	print()
 
 	valid_lines = get_permutations(len(puzzle))
 	puzzle = fill_rest(puzzle, valid_lines)
