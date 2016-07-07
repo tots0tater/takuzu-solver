@@ -23,8 +23,8 @@ def replace_twos(line):
 	Helps fill out the initial board
 	"""
 	patterns = (('.00.', '1001'), ('00.', '001'), ('.00', '100'),
-				('.11.', '0110'), ('11.', '110'), ('.11', '011'),
-				('1.1', '101'), ('0.0', '010'))
+                ('.11.', '0110'), ('11.', '110'), ('.11', '011'),
+                ('1.1', '101'), ('0.0', '010'))
 
 	for old, new in patterns:
 		line = line.replace(old, new)
@@ -79,6 +79,7 @@ def fill_rest(puzzle, valid_lines):
 		line_solutions.append(list(sol))
 
 	filled_puzzles = list(itertools.product(*line_solutions))
+
 	for p in filled_puzzles:
 		if satisfy_constraints(p):
 			return p
