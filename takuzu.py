@@ -1,5 +1,8 @@
 import re, itertools, copy
 
+class SolvingFailureException(Exception):
+	pass
+
 def rotate_right(puzzle):
 	"""
 	Rotates the puzzle right thus making
@@ -19,16 +22,12 @@ def replace_twos(line):
 	An easy placement of alternating numbers. 
 	Helps fill out the initial board
 	"""
-	line = line.replace('.00.', '1001')
-	line = line.replace('00.', '001')
-	line = line.replace('.00', '100')
-	
-	line = line.replace('.11.', '0110')
-	line = line.replace('11.', '110')
-	line = line.replace('.11', '011')
+	patterns = (('.00.', '1001'), ('00.', '001'), ('.00', '100'),
+				('.11.', '0110'), ('11.', '110'), ('.11', '011'),
+				('1.1', '101'), ('0.0', '010'))
 
-	line = line.replace('1.1', '101')
-	line = line.replace('0.0', '010')
+	for old, new in patterns:
+		line = line.replace(old, new)
 
 	return line
 
@@ -58,9 +57,7 @@ def solve_partial(puzzle):
 		rot_puzzle[i] = replace_twos(rot_puzzle[i])
 		rot_puzzle[i] = half_filled(rot_puzzle[i])
 
-	puzzle = rotate_left(rot_puzzle)
-
-	return puzzle
+	return rotate_left(rot_puzzle)
 
 def fill_rest(puzzle, valid_lines):
 	"""
@@ -74,20 +71,19 @@ def fill_rest(puzzle, valid_lines):
 		return puzzle
 
 	line_solutions = []
-	for i in range(len(puzzle)):
+	for row in puzzle:
 		sol = set()
 		for line in valid_lines:
-			if like_original(puzzle[i], line):
+			if like_original(row, line):
 				sol.add(line)
 		line_solutions.append(list(sol))
 
 	filled_puzzles = list(itertools.product(*line_solutions))
-
 	for p in filled_puzzles:
 		if satisfy_constraints(p):
 			return p
 
-	print("UH OH")
+	raise SolvingFailureException("Puzzle could not be solved.")
 
 def satisfy_constraints(puzzle):
 	"""
@@ -95,41 +91,38 @@ def satisfy_constraints(puzzle):
 	match before it satisfies the constraints.
 	"""
 	rot_puzzle = rotate_right(puzzle)
-
-	contain_dot = not any(['.' in line for line in puzzle])
-	reg_eq = all([equal_num(line) for line in puzzle])
-	rot_eq = all([equal_num(line) for line in rot_puzzle])
-
-	# Make sure all of the rows/columns are unique
-	reg_diff = [puzzle.count(line) for line in puzzle] == [1]*len(puzzle)
-	rot_diff = [rot_puzzle.count(line) for line in rot_puzzle] == [1]*len(puzzle)
-
-	# If any of them have three consecutive
-	reg_consecutive = not any([three_consecutive(line) for line in puzzle])
-	rot_consecutive = not any([three_consecutive(line) for line in rot_puzzle])
-
-	return all([contain_dot, reg_eq, rot_eq, reg_diff, rot_diff, reg_consecutive, rot_consecutive])
+	return all((
+		not any(['.' in line for line in puzzle]),
+		# Make sure there are the same number of 
+		# 1s and 0s on each line
+		all([equal_num(line) for line in puzzle]),
+		all([equal_num(line) for line in rot_puzzle]),
+		# Check distinct lines
+		len(set(puzzle)) == len(puzzle),
+		len(set(rot_puzzle)) == len(rot_puzzle),
+		# Three 1s or 2s in a row
+		not any([three_consecutive(line) for line in puzzle]),
+		not any([three_consecutive(line) for line in rot_puzzle]),
+	))
 
 def like_original(line, potential_solution):
 	# Our line is already in the form of a regular
 	# expression. '.' is a wildcard 
-	return True if re.match(line, potential_solution) else False
+	return bool(re.match(line, potential_solution))
 
 def three_consecutive(line):
 	"""
 	Returns a bool whether or not there are three
 	consecutive numbers in a row on our line
 	"""
-	return True if re.search('[0]{3,}|[1]{3,}', line) else False
+	return bool(re.search('[0]{3,}|[1]{3,}', line))
 
 def equal_num(line):
 	"""
 	Returns a bool determining if there are more
 	1s than half the length of our line
 	"""
-	if line.count('1') > len(line) // 2 or line.count('0') > len(line) // 2:
-		return False
-	return True
+	return not (line.count('1') > len(line) // 2 or line.count('0') > len(line) // 2)
 
 def flatten(deep_list):
 	while type(deep_list[0]) == type([]):
@@ -176,9 +169,8 @@ if __name__ == '__main__':
 	print_puzzle(puzzle)
 	
 	puzzle_copy = []
-	# Go until our solve partial returns the
-	# same puzzle as before; this means we
-	# can't get any more easy placements
+	# Go until we find the fixed point; this 
+	# means we can't get any more easy placements
 	while puzzle != puzzle_copy:
 		puzzle_copy = copy.deepcopy(puzzle)
 		puzzle = solve_partial(puzzle)
